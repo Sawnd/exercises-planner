@@ -91,9 +91,12 @@ function renderRow(container, ex) {
         class: 'btn btn--danger-ghost',
         text: 'Suppr.',
         onClick: async () => {
-          if (confirm(`Supprimer « ${ex.nom} » ?`)) {
+          if (!confirm(`Supprimer « ${ex.nom} » ?`)) return;
+          try {
             await deleteExercise(ex.id);
             await refresh(container);
+          } catch (err) {
+            alert(err.message);
           }
         },
       }),

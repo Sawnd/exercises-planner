@@ -4,30 +4,79 @@ import { primeAudio, signalStep, signalComplete } from '../timer/feedback.js';
 import { requestWakeLock, releaseWakeLock } from '../timer/wakelock.js';
 import { resolveManualSerie } from '../domain/resolve.js';
 import { buildTimeline } from '../domain/build-timeline.js';
-import { DEMO_SERIE, DEMO_EXERCISES } from '../fixtures/demo-serie.js';
+import { listSeries } from '../db/series.js';
+import { getExercisesById } from '../db/exercises.js';
 
 const STEP_LABEL = { prepare: 'Préparation', work: 'Effort', rest: 'Repos' };
 
-export function renderPlayer(root) {
+export async function renderPlayer(root) {
   clear(root);
-
-  // Étape 1 : la série est codée en dur (fixtures). En étape 2, on la
-  // récupérera depuis « Mes séries » via le même resolve + buildTimeline.
-  const exercisesById = Object.fromEntries(DEMO_EXERCISES.map((e) => [e.id, e]));
-  const resolved = resolveManualSerie(DEMO_SERIE, exercisesById);
-  const steps = buildTimeline(resolved, { prepareSeconds: 3 });
-
   const view = el('section', { class: 'screen player' });
   root.append(view);
+  await showChooser(view);
+}
 
-  showStartScreen(view, { serie: DEMO_SERIE, resolved, steps });
+async function showChooser(view) {
+  clear(view);
+  const [series, exercisesById] = await Promise.all([listSeries(), getExercisesById()]);
+
+  if (series.length === 0) {
+    view.append(
+      el('div', { class: 'player-start' }, [
+        el('h1', { text: 'Player' }),
+        el('p', { class: 'muted', text: 'Aucune série pour l’instant.' }),
+        el('a', { class: 'btn btn--primary', href: '#/series', text: 'Créer une série' }),
+      ]),
+    );
+    return;
+  }
+
+  view.append(
+    el('div', { class: 'player-start' }, [
+      el('h1', { text: 'Choisir une série' }),
+      el(
+        'ul',
+        { class: 'chooser' },
+        series.map((serie) =>
+          el('li', {}, [
+            el('button', {
+              class: 'chooser__item',
+              onClick: () => launch(view, serie, exercisesById),
+            }, [
+              el('span', { class: 'chooser__name', text: serie.nom }),
+              el('span', { class: 'muted', text: `${serie.items.length} exo${serie.items.length > 1 ? 's' : ''}` }),
+            ]),
+          ]),
+        ),
+      ),
+    ]),
+  );
+}
+
+function launch(view, serie, exercisesById) {
+  let resolved;
+  try {
+    resolved = resolveManualSerie(serie, exercisesById);
+  } catch (err) {
+    clear(view);
+    view.append(
+      el('div', { class: 'player-start' }, [
+        el('h1', { text: 'Série non lançable' }),
+        el('p', { class: 'form__error', text: err.message }),
+        el('button', { class: 'btn btn--ghost', text: '← Retour', onClick: () => showChooser(view) }),
+      ]),
+    );
+    return;
+  }
+  const steps = buildTimeline(resolved, { prepareSeconds: 3 });
+  showStartScreen(view, { serie, resolved, steps });
 }
 
 function showStartScreen(view, ctx) {
   clear(view);
   view.append(
     el('div', { class: 'player-start' }, [
-      el('p', { class: 'muted', text: 'Série codée en dur (étape 1)' }),
+      el('button', { class: 'link-back', text: '← Autre série', onClick: () => showChooser(view) }),
       el('h1', { text: ctx.serie.nom }),
       el(
         'ol',
@@ -134,11 +183,18 @@ function showDoneScreen(view, ctx) {
     el('div', { class: 'player-start' }, [
       el('h1', { text: 'Séance terminée 🎉' }),
       el('p', { class: 'muted', text: ctx.serie.nom }),
-      el('button', {
-        class: 'btn btn--primary btn--big',
-        text: 'Recommencer',
-        onClick: () => showStartScreen(view, ctx),
-      }),
+      el('div', { class: 'ex-form__actions' }, [
+        el('button', {
+          class: 'btn btn--primary',
+          text: 'Recommencer',
+          onClick: () => showStartScreen(view, ctx),
+        }),
+        el('button', {
+          class: 'btn btn--ghost',
+          text: 'Autre série',
+          onClick: () => showChooser(view),
+        }),
+      ]),
     ]),
   );
 }

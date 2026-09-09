@@ -27,7 +27,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: 'index.html',
       },
-      devOptions: { enabled: true, type: 'module' },
+      // SW désactivé en dev (évite le cache trompeur pendant le développement).
+      // L'offline complet se teste sur le build : `npm run build && npm run preview`.
+      devOptions: { enabled: false },
     }),
   ],
 });

@@ -1,4 +1,5 @@
 import { getDB, STORE_EXERCISES } from './database.js';
+import { seriesUsingExercise } from './series.js';
 
 /**
  * Modèle Exercise stocké en IndexedDB :
@@ -76,8 +77,21 @@ export async function updateExercise(id, input) {
 }
 
 export async function deleteExercise(id) {
+  const used = await seriesUsingExercise(id);
+  if (used.length > 0) {
+    const noms = used.map((s) => `« ${s.nom} »`).join(', ');
+    throw new Error(
+      `Impossible de supprimer : cet exercice est utilisé dans ${noms}. Retire-le d'abord de ${used.length > 1 ? 'ces séries' : 'cette série'}.`,
+    );
+  }
   const db = await getDB();
   await db.delete(STORE_EXERCISES, id);
+}
+
+/** Map { [id]: Exercise } pour la résolution des séries. */
+export async function getExercisesById() {
+  const all = await listExercises();
+  return Object.fromEntries(all.map((e) => [e.id, e]));
 }
 
 /** Liste distincte des tags libres déjà saisis, pour l'autocomplétion. */

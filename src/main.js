@@ -1,20 +1,26 @@
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
 import { renderLibrary } from './screens/library.js';
+import { renderSeries } from './screens/series.js';
 import { renderPlayer } from './screens/player.js';
 
 registerSW({ immediate: true });
 
 const routes = {
   '/bibliotheque': renderLibrary,
+  '/series': renderSeries,
   '/player': renderPlayer,
 };
 const DEFAULT_ROUTE = '/bibliotheque';
 
 const appEl = document.getElementById('app');
 
+function currentPath() {
+  return location.hash.replace(/^#/, '') || DEFAULT_ROUTE;
+}
+
 async function router() {
-  const path = location.hash.replace(/^#/, '') || DEFAULT_ROUTE;
+  const path = currentPath();
   const render = routes[path] || routes[DEFAULT_ROUTE];
 
   document.querySelectorAll('.topbar__nav a').forEach((a) => {
@@ -34,4 +40,12 @@ async function router() {
 }
 
 window.addEventListener('hashchange', router);
+
+// Re-cliquer l'onglet déjà actif force un rafraîchissement de l'écran
+// (le hash ne change pas → pas d'événement `hashchange`).
+document.querySelector('.topbar__nav')?.addEventListener('click', (e) => {
+  const link = e.target.closest('a[data-route]');
+  if (link && link.dataset.route === currentPath()) router();
+});
+
 router();

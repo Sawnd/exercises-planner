@@ -42,3 +42,8 @@ export function buildTimeline(resolved, { prepareSeconds = 3 } = {}) {
 
   return steps;
 }
+
+/** Durée totale d'une timeline en secondes (préparation + efforts + repos). */
+export function timelineSeconds(steps) {
+  return steps.reduce((total, step) => total + step.seconds, 0);
+}

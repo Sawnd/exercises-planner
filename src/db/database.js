@@ -1,9 +1,10 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'exercises-planner';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const STORE_EXERCISES = 'exercises';
+export const STORE_SERIES = 'series';
 
 let _dbPromise = null;
 
@@ -15,8 +16,12 @@ export function getDB() {
         if (oldVersion < 1) {
           db.createObjectStore(STORE_EXERCISES, { keyPath: 'id' });
         }
-        // Les stores des étapes suivantes (séries, historique) seront
-        // ajoutés ici en incrémentant DB_VERSION.
+        // v2 : store des séries manuelles
+        if (oldVersion < 2) {
+          db.createObjectStore(STORE_SERIES, { keyPath: 'id' });
+        }
+        // Les stores des étapes suivantes (historique) seront ajoutés ici
+        // en incrémentant DB_VERSION.
       },
     });
   }
