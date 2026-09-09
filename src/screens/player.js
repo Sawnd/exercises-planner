@@ -112,6 +112,7 @@ function startRun(view, ctx) {
   progress.append(progressBar);
 
   const pauseBtn = el('button', { class: 'btn btn--ghost', text: 'Pause' });
+  const nextBtn = el('button', { class: 'btn btn--ghost', text: 'Suivant ⏭' });
   const stopBtn = el('button', { class: 'btn btn--danger-ghost', text: 'Stop' });
 
   runEl.append(
@@ -120,7 +121,7 @@ function startRun(view, ctx) {
     exerciseName,
     bigTime,
     nextUp,
-    el('div', { class: 'run__controls' }, [pauseBtn, stopBtn]),
+    el('div', { class: 'run__controls' }, [pauseBtn, nextBtn, stopBtn]),
   );
   view.append(runEl);
 
@@ -165,6 +166,12 @@ function startRun(view, ctx) {
       pauseBtn.textContent = 'Pause';
       runEl.classList.remove('run--paused');
     }
+  });
+
+  nextBtn.addEventListener('click', () => {
+    engine.next();
+    pauseBtn.textContent = 'Pause';
+    runEl.classList.remove('run--paused');
   });
 
   stopBtn.addEventListener('click', () => {

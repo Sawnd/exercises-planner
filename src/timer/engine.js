@@ -82,6 +82,13 @@ export function createTimerEngine({ onTick, onStepChange, onComplete } = {}) {
       intervalId = setInterval(emitTick, TICK_MS);
     },
 
+    /** Termine l'étape courante immédiatement et passe à la suivante. */
+    next() {
+      if (index < 0 || index >= steps.length) return;
+      running = true;
+      enterStep(index + 1);
+    },
+
     stop() {
       clearLoop();
       running = false;
