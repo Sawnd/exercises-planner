@@ -94,10 +94,28 @@ export async function getExercisesById() {
   return Object.fromEntries(all.map((e) => [e.id, e]));
 }
 
-/** Liste distincte des tags libres déjà saisis, pour l'autocomplétion. */
-export async function listCategories() {
+/**
+ * Liste distincte des tags libres déjà saisis, pour l'autocomplétion et les filtres.
+ * @param {{ masterCategorie?: 'fitness'|'yoga' }} [options] - restreint aux exercices de cette master catégorie
+ */
+export async function listCategories({ masterCategorie } = {}) {
   const all = await listExercises();
-  return [...new Set(all.flatMap((e) => e.categories))].sort((a, b) =>
+  const scoped = masterCategorie ? all.filter((e) => e.masterCategorie === masterCategorie) : all;
+  return [...new Set(scoped.flatMap((e) => e.categories))].sort((a, b) =>
     a.localeCompare(b, 'fr'),
+  );
+}
+
+/**
+ * Filtre les exercices par master catégorie et/ou tags libres (correspondance
+ * "au moins un tag" — OR — quand plusieurs tags sont fournis).
+ * @param {{ masterCategorie?: 'fitness'|'yoga', categories?: string[] }} [filters]
+ */
+export async function filterExercises({ masterCategorie, categories = [] } = {}) {
+  const all = await listExercises();
+  return all.filter(
+    (e) =>
+      (!masterCategorie || e.masterCategorie === masterCategorie) &&
+      (categories.length === 0 || categories.some((c) => e.categories.includes(c))),
   );
 }

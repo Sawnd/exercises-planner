@@ -26,3 +26,18 @@ export function resolveManualSerie(serie, exercisesById) {
     };
   });
 }
+
+/**
+ * Résolution du mode random : TOUS les exercices tirés utilisent durée_globale /
+ * repos_global. Les défauts de la bibliothèque sont ignorés dans ce mode.
+ *
+ * @param {{nom: string}[]} drawnExercises
+ * @param {{ dureeGlobale: number, reposGlobale: number }} globals
+ */
+export function resolveRandomDraw(drawnExercises, { dureeGlobale, reposGlobale }) {
+  return drawnExercises.map((exercise) => ({
+    nom: exercise.nom,
+    duree: dureeGlobale,
+    repos: reposGlobale,
+  }));
+}

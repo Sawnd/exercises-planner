@@ -208,6 +208,22 @@ a { color: var(--primary); }
 .icon-btn:disabled { opacity: 0.3; cursor: default; }
 .icon-btn--danger { color: var(--danger); width: 34px; height: 34px; font-size: 0.9rem; }
 
+/* ---------- Random ---------- */
+.screen.random { max-width: 480px; }
+.random__field { display: flex; flex-direction: column; gap: 6px; }
+.toggle-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-toggle {
+  appearance: none;
+  border: 1px solid var(--surface-2);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.chip-toggle.is-active { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); font-weight: 600; }
+
 /* ---------- Player : choix de la série ---------- */
 .chooser { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .chooser__item {

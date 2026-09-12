@@ -2,6 +2,7 @@ import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
 import { renderLibrary } from './screens/library.js';
 import { renderSeries } from './screens/series.js';
+import { renderRandom } from './screens/random.js';
 import { renderPlayer } from './screens/player.js';
 
 registerSW({ immediate: true });
@@ -9,6 +10,7 @@ registerSW({ immediate: true });
 const routes = {
   '/bibliotheque': renderLibrary,
   '/series': renderSeries,
+  '/random': renderRandom,
   '/player': renderPlayer,
 };
 const DEFAULT_ROUTE = '/bibliotheque';
