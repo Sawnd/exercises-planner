@@ -3,6 +3,7 @@ import { resolveManualSerie } from '../domain/resolve.js';
 import { buildTimeline } from '../domain/build-timeline.js';
 import { listSeries } from '../db/series.js';
 import { getExercisesById } from '../db/exercises.js';
+import { recordCompletion } from '../db/history.js';
 import { showSessionPreview } from './run.js';
 
 export async function renderPlayer(root) {
@@ -70,5 +71,12 @@ function launch(view, serie, exercisesById) {
     resolved,
     steps,
     onBack: () => showChooser(view),
+    onComplete: () =>
+      recordCompletion({
+        source: 'serie',
+        serieId: serie.id,
+        serieName: serie.nom,
+        exerciseIds: resolved.map((r) => r.exerciseId),
+      }),
   });
 }

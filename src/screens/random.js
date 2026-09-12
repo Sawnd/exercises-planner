@@ -3,6 +3,7 @@ import { listExercises, MASTER_CATEGORIES } from '../db/exercises.js';
 import { drawRandom } from '../domain/random.js';
 import { resolveRandomDraw } from '../domain/resolve.js';
 import { buildTimeline } from '../domain/build-timeline.js';
+import { recordCompletion } from '../db/history.js';
 import { showSessionPreview } from './run.js';
 
 const MASTER_LABEL = { fitness: 'Fitness', yoga: 'Yoga' };
@@ -131,12 +132,20 @@ async function renderForm(view) {
     const drawn = drawRandom(p, count);
     const resolved = resolveRandomDraw(drawn, { dureeGlobale, reposGlobale });
     const steps = buildTimeline(resolved, { prepareSeconds: 3 });
+    const title = `Aléatoire · ${MASTER_LABEL[masterCategorie]}`;
 
     showSessionPreview(view, {
-      title: `Aléatoire · ${MASTER_LABEL[masterCategorie]}`,
+      title,
       resolved,
       steps,
       onBack: () => renderForm(view),
+      onComplete: () =>
+        recordCompletion({
+          source: 'random',
+          serieId: null,
+          serieName: title,
+          exerciseIds: resolved.map((r) => r.exerciseId),
+        }),
     });
   });
 

@@ -4,6 +4,7 @@ import { listSeries, createSerie, updateSerie, deleteSerie } from '../db/series.
 import { resolveManualSerie } from '../domain/resolve.js';
 import { buildTimeline, timelineSeconds } from '../domain/build-timeline.js';
 import { renderCategoryFilterBar } from '../ui/category-filter.js';
+import { listCompletions, serieStreak } from '../db/history.js';
 
 export async function renderSeries(root) {
   clear(root);
@@ -14,10 +15,11 @@ export async function renderSeries(root) {
 
 async function refresh(container, { editingId = null, creating = false } = {}) {
   clear(container);
-  const [series, exercises, exercisesById] = await Promise.all([
+  const [series, exercises, exercisesById, completions] = await Promise.all([
     listSeries(),
     listExercises(),
     getExercisesById(),
+    listCompletions(),
   ]);
 
   container.append(
@@ -61,16 +63,17 @@ async function refresh(container, { editingId = null, creating = false } = {}) {
         ]),
       );
     } else {
-      list.append(renderCard(container, serie, exercisesById));
+      list.append(renderCard(container, serie, exercisesById, completions));
     }
   }
   container.append(list);
 }
 
-function renderCard(container, serie, exercisesById) {
+function renderCard(container, serie, exercisesById, completions) {
   const resolved = resolveManualSerie(serie, exercisesById);
   const totalMin = Math.round(timelineSeconds(buildTimeline(resolved, { prepareSeconds: 3 })) / 60);
   const n = serie.items.length;
+  const streak = serieStreak(completions, serie.id);
 
   return el('li', { class: 'ex-list__item' }, [
     el('div', { class: 'ex-list__main' }, [
@@ -78,6 +81,7 @@ function renderCard(container, serie, exercisesById) {
       el('div', { class: 'ex-list__meta' }, [
         el('span', { class: 'chip chip--time', text: `${n} exercice${n > 1 ? 's' : ''}` }),
         el('span', { class: 'chip chip--time', text: `≈ ${totalMin} min` }),
+        streak > 0 ? el('span', { class: 'chip chip--streak', text: `🔥 ${streak} j.` }) : null,
         ...resolved.slice(0, 4).map((r) => el('span', { class: 'chip', text: r.nom })),
         resolved.length > 4 ? el('span', { class: 'chip', text: `+${resolved.length - 4}` }) : null,
       ]),

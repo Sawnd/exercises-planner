@@ -4,6 +4,7 @@ import { renderLibrary } from './screens/library.js';
 import { renderSeries } from './screens/series.js';
 import { renderRandom } from './screens/random.js';
 import { renderPlayer } from './screens/player.js';
+import { renderHistory } from './screens/history.js';
 
 registerSW({ immediate: true });
 
@@ -12,6 +13,7 @@ const routes = {
   '/series': renderSeries,
   '/random': renderRandom,
   '/player': renderPlayer,
+  '/historique': renderHistory,
 };
 const DEFAULT_ROUTE = '/bibliotheque';
 

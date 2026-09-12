@@ -20,6 +20,7 @@ export function resolveManualSerie(serie, exercisesById) {
       throw new Error(`Exercice introuvable dans la bibliothèque : ${item.exercise_id}`);
     }
     return {
+      exerciseId: exercise.id,
       nom: exercise.nom,
       duree: item.duree ?? exercise.dureeDefaut,
       repos: item.repos ?? exercise.reposDefaut,
@@ -36,6 +37,7 @@ export function resolveManualSerie(serie, exercisesById) {
  */
 export function resolveRandomDraw(drawnExercises, { dureeGlobale, reposGlobale }) {
   return drawnExercises.map((exercise) => ({
+    exerciseId: exercise.id,
     nom: exercise.nom,
     duree: dureeGlobale,
     repos: reposGlobale,
