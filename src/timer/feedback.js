@@ -65,3 +65,30 @@ export function signalComplete() {
   beep({ freq: 1300, durationMs: 260 });
   vibrate([200, 80, 200, 80, 300]);
 }
+
+/** Bip discret pour le décompte des 3 dernières secondes d'une étape. */
+export function signalCountdownTick() {
+  beep({ freq: 520, durationMs: 90, volume: 0.18 });
+  vibrate(40);
+}
+
+function pickFrenchVoice() {
+  const voices = window.speechSynthesis?.getVoices?.() ?? [];
+  return voices.find((v) => v.lang?.toLowerCase().startsWith('fr')) ?? voices[0] ?? null;
+}
+
+/** Annonce vocale (nom de l'exercice à venir). Silencieux si l'API n'est pas supportée. */
+export function announce(text) {
+  try {
+    if (!('speechSynthesis' in window) || !text) return;
+    window.speechSynthesis.cancel(); // évite l'empilement si on enchaîne vite (skip)
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-FR';
+    utterance.rate = 1;
+    const voice = pickFrenchVoice();
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  } catch {
+    /* voix indisponible : on continue sans annonce */
+  }
+}

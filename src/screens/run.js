@@ -1,6 +1,6 @@
 import { el, clear, formatTime } from '../ui/dom.js';
 import { createTimerEngine } from '../timer/engine.js';
-import { primeAudio, signalStep, signalComplete } from '../timer/feedback.js';
+import { primeAudio, signalStep, signalComplete, signalCountdownTick, announce } from '../timer/feedback.js';
 import { requestWakeLock, releaseWakeLock } from '../timer/wakelock.js';
 
 // Moteur d'affichage de séance partagé par le Player (séries manuelles) et
@@ -72,10 +72,12 @@ function startRun(view, ctx) {
 
   const workSteps = ctx.steps.filter((s) => s.type === 'work').length;
   let workDone = 0;
+  let lastCountdownSecond = null;
 
   const engine = createTimerEngine({
     onStepChange(step, index, total) {
       signalStep(step);
+      lastCountdownSecond = null;
       runEl.className = `run run--${step.type}`;
       stepKind.textContent = STEP_LABEL[step.type];
       if (step.type === 'work') {
@@ -85,14 +87,21 @@ function startRun(view, ctx) {
       } else if (step.type === 'rest') {
         exerciseName.textContent = step.exerciseName;
         nextUp.textContent = 'À suivre';
+        announce(step.exerciseName); // annonce l'exercice suivant pendant le repos
       } else {
         exerciseName.textContent = step.exerciseName;
         nextUp.textContent = 'Prêt ?';
+        announce(step.exerciseName); // annonce le premier exercice pendant la préparation
       }
       progressBar.style.width = `${Math.round((index / total) * 100)}%`;
     },
-    onTick(remaining) {
+    onTick(remaining, step) {
       bigTime.textContent = formatTime(remaining);
+      const isCountdownEligible = step.type === 'work' || step.type === 'rest';
+      if (isCountdownEligible && remaining >= 1 && remaining <= 3 && remaining !== lastCountdownSecond) {
+        lastCountdownSecond = remaining;
+        signalCountdownTick();
+      }
     },
     onComplete() {
       signalComplete();
