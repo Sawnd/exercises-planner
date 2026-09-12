@@ -5,6 +5,7 @@ import { renderSeries } from './screens/series.js';
 import { renderRandom } from './screens/random.js';
 import { renderPlayer } from './screens/player.js';
 import { renderHistory } from './screens/history.js';
+import { renderBackup } from './screens/backup.js';
 
 registerSW({ immediate: true });
 
@@ -14,6 +15,7 @@ const routes = {
   '/random': renderRandom,
   '/player': renderPlayer,
   '/historique': renderHistory,
+  '/export': renderBackup,
 };
 const DEFAULT_ROUTE = '/bibliotheque';
 
@@ -28,7 +30,9 @@ async function router() {
   const render = routes[path] || routes[DEFAULT_ROUTE];
 
   document.querySelectorAll('.topbar__nav a').forEach((a) => {
-    a.classList.toggle('is-active', a.dataset.route === path);
+    const active = a.dataset.route === path;
+    a.classList.toggle('is-active', active);
+    if (active) a.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   });
 
   try {

@@ -47,12 +47,22 @@ h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--surface-2);
 }
-.topbar__title { font-weight: 700; letter-spacing: 0.02em; }
-.topbar__nav { display: flex; gap: 8px; }
+.topbar__title { font-weight: 700; letter-spacing: 0.02em; flex-shrink: 0; }
+.topbar__nav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+}
+.topbar__nav::-webkit-scrollbar { display: none; }
 .topbar__nav a {
+  flex-shrink: 0;
   color: var(--muted);
   text-decoration: none;
   font-size: 0.9rem;
+  white-space: nowrap;
   padding: 6px 10px;
   border-radius: 999px;
 }
