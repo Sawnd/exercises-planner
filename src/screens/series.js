@@ -3,6 +3,7 @@ import { listExercises, getExercisesById } from '../db/exercises.js';
 import { listSeries, createSerie, updateSerie, deleteSerie } from '../db/series.js';
 import { resolveManualSerie } from '../domain/resolve.js';
 import { buildTimeline, timelineSeconds } from '../domain/build-timeline.js';
+import { renderCategoryFilterBar } from '../ui/category-filter.js';
 
 export async function renderSeries(root) {
   clear(root);
@@ -112,16 +113,21 @@ function renderEditor({ container, exercises, exercisesById, serie }) {
     required: 'required',
   });
 
-  const addSelect = el(
-    'select',
-    {},
-    [
+  const addSelect = el('select', {});
+  function renderAddOptions(list) {
+    clear(addSelect);
+    addSelect.append(
       el('option', { value: '', text: '— choisir un exercice —' }),
-      ...exercises.map((e) =>
-        el('option', { value: e.id, text: `${e.nom} · ${e.dureeDefaut}s / ${e.reposDefaut}s` }),
-      ),
-    ],
-  );
+      ...list.map((e) => el('option', { value: e.id, text: `${e.nom} · ${e.dureeDefaut}s / ${e.reposDefaut}s` })),
+    );
+  }
+  renderAddOptions(exercises);
+
+  const filterBar = renderCategoryFilterBar({
+    exercises,
+    onChange: (filtered) => renderAddOptions(filtered),
+  });
+
   const addBtn = el('button', {
     type: 'button',
     class: 'btn btn--ghost',
@@ -201,6 +207,7 @@ function renderEditor({ container, exercises, exercisesById, serie }) {
 
   const form = el('form', { class: 'serie-form' }, [
     el('label', {}, [el('span', { text: 'Nom de la série' }), nomInput]),
+    filterBar,
     el('div', { class: 'serie-form__add' }, [addSelect, addBtn]),
     itemsList,
     el('p', { class: 'muted small', text: 'Champs durée / repos vides = valeur par défaut de l’exercice (affichée en gris).' }),

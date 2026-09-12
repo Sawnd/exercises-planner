@@ -7,6 +7,7 @@ import {
   updateExercise,
   deleteExercise,
 } from '../db/exercises.js';
+import { renderCategoryFilterBar } from '../ui/category-filter.js';
 
 const MASTER_LABEL = { fitness: 'Fitness', yoga: 'Yoga' };
 
@@ -14,12 +15,23 @@ export async function renderLibrary(root) {
   clear(root);
   const container = el('section', { class: 'screen library' });
   root.append(container);
-  await refresh(container);
+  // L'état du filtre survit aux re-rendus (édition, ajout, suppression)
+  // tant qu'on reste sur cet écran.
+  const filterState = { masters: new Set(), tags: new Set() };
+  await refresh(container, filterState);
 }
 
-async function refresh(container, { editingId = null, creating = false } = {}) {
+function applyFilter(exercises, { masters, tags }) {
+  return exercises.filter(
+    (e) =>
+      (masters.size === 0 || masters.has(e.masterCategorie)) &&
+      (tags.size === 0 || [...tags].some((t) => e.categories.includes(t))),
+  );
+}
+
+async function refresh(container, filterState, { editingId = null, creating = false } = {}) {
   clear(container);
-  const [exercises, knownCategories] = await Promise.all([
+  const [allExercises, knownCategories] = await Promise.all([
     listExercises(),
     listCategories(),
   ]);
@@ -31,44 +43,57 @@ async function refresh(container, { editingId = null, creating = false } = {}) {
         class: 'btn btn--primary',
         text: '+ Ajouter',
         disabled: creating,
-        onClick: () => refresh(container, { creating: true }),
+        onClick: () => refresh(container, filterState, { creating: true }),
       }),
     ]),
   );
 
   if (creating) {
     container.append(
-      renderForm({
-        container,
-        knownCategories,
-        exercise: null,
-      }),
+      renderForm({ container, filterState, knownCategories, exercise: null }),
     );
   }
 
-  if (exercises.length === 0 && !creating) {
+  if (allExercises.length === 0 && !creating) {
     container.append(
       el('p', { class: 'muted', text: 'Aucun exercice. Ajoute ton premier exercice de kiné, de fitness ou de yoga.' }),
     );
     return;
   }
 
+  container.append(
+    renderCategoryFilterBar({
+      exercises: allExercises,
+      initialState: filterState,
+      onChange: (_filtered, state) => {
+        filterState.masters = state.masters;
+        filterState.tags = state.tags;
+        refresh(container, filterState, { editingId, creating });
+      },
+    }),
+  );
+
+  const exercises = applyFilter(allExercises, filterState);
   const list = el('ul', { class: 'ex-list' });
-  for (const ex of exercises) {
-    if (ex.id === editingId) {
-      list.append(
-        el('li', { class: 'ex-list__item ex-list__item--editing' }, [
-          renderForm({ container, knownCategories, exercise: ex }),
-        ]),
-      );
-    } else {
-      list.append(renderRow(container, ex));
+  if (exercises.length === 0) {
+    list.append(el('li', { class: 'muted', text: 'Aucun exercice ne correspond à ce filtre.' }));
+  } else {
+    for (const ex of exercises) {
+      if (ex.id === editingId) {
+        list.append(
+          el('li', { class: 'ex-list__item ex-list__item--editing' }, [
+            renderForm({ container, filterState, knownCategories, exercise: ex }),
+          ]),
+        );
+      } else {
+        list.append(renderRow(container, filterState, ex));
+      }
     }
   }
   container.append(list);
 }
 
-function renderRow(container, ex) {
+function renderRow(container, filterState, ex) {
   return el('li', { class: 'ex-list__item' }, [
     el('div', { class: 'ex-list__main' }, [
       el('div', { class: 'ex-list__title' }, [
@@ -85,7 +110,7 @@ function renderRow(container, ex) {
       el('button', {
         class: 'btn btn--ghost',
         text: 'Éditer',
-        onClick: () => refresh(container, { editingId: ex.id }),
+        onClick: () => refresh(container, filterState, { editingId: ex.id }),
       }),
       el('button', {
         class: 'btn btn--danger-ghost',
@@ -94,7 +119,7 @@ function renderRow(container, ex) {
           if (!confirm(`Supprimer « ${ex.nom} » ?`)) return;
           try {
             await deleteExercise(ex.id);
-            await refresh(container);
+            await refresh(container, filterState);
           } catch (err) {
             alert(err.message);
           }
@@ -104,7 +129,7 @@ function renderRow(container, ex) {
   ]);
 }
 
-function renderForm({ container, knownCategories, exercise }) {
+function renderForm({ container, filterState, knownCategories, exercise }) {
   const isEdit = Boolean(exercise);
   let tags = isEdit ? [...exercise.categories] : [];
 
@@ -214,7 +239,7 @@ function renderForm({ container, knownCategories, exercise }) {
         type: 'button',
         class: 'btn btn--ghost',
         text: 'Annuler',
-        onClick: () => refresh(container),
+        onClick: () => refresh(container, filterState),
       }),
     ]),
   ]);
@@ -232,7 +257,7 @@ function renderForm({ container, knownCategories, exercise }) {
     try {
       if (isEdit) await updateExercise(exercise.id, payload);
       else await createExercise(payload);
-      await refresh(container);
+      await refresh(container, filterState);
     } catch (err) {
       errorBox.textContent = err.message;
       errorBox.hidden = false;
