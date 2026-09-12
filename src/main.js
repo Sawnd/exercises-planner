@@ -6,6 +6,7 @@ import { renderRandom } from './screens/random.js';
 import { renderPlayer } from './screens/player.js';
 import { renderHistory } from './screens/history.js';
 import { renderBackup } from './screens/backup.js';
+import { checkDailyReminder } from './reminder.js';
 
 registerSW({ immediate: true });
 
@@ -20,6 +21,7 @@ const routes = {
 const DEFAULT_ROUTE = '/bibliotheque';
 
 const appEl = document.getElementById('app');
+const reminderEl = document.getElementById('reminder-banner');
 
 function currentPath() {
   return location.hash.replace(/^#/, '') || DEFAULT_ROUTE;
@@ -45,9 +47,16 @@ async function router() {
     appEl.append(pre);
     console.error(err);
   }
+
+  if (reminderEl) checkDailyReminder(reminderEl);
 }
 
 window.addEventListener('hashchange', router);
+
+// Réévalue le rappel au retour au premier plan (app rouverte le lendemain…).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && reminderEl) checkDailyReminder(reminderEl);
+});
 
 // Re-cliquer l'onglet déjà actif force un rafraîchissement de l'écran
 // (le hash ne change pas → pas d'événement `hashchange`).
