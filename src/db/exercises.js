@@ -10,6 +10,8 @@ import { seriesUsingExercise } from './series.js';
  *   categories: string[],                  // tags libres
  *   dureeDefaut: number,                   // secondes
  *   reposDefaut: number,                   // secondes
+ *   description: string,                   // optionnel, affiché dans le Player
+ *   image: string | null,                  // optionnel, data URL (JPEG compressé), affiché dans le Player
  * }
  */
 
@@ -46,6 +48,8 @@ function normalize(input) {
     categories,
     dureeDefaut: toPositiveInt(input.dureeDefaut, { min: 1 }),
     reposDefaut: toPositiveInt(input.reposDefaut, { min: 0 }),
+    description: String(input.description ?? '').trim(),
+    image: input.image || null,
   };
 }
 

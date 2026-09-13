@@ -8,6 +8,8 @@ import {
   deleteExercise,
 } from '../db/exercises.js';
 import { renderCategoryFilterBar } from '../ui/category-filter.js';
+import { fileToCompressedDataUrl } from '../ui/image-utils.js';
+import { FITNESS_STARTER_PACK } from '../fixtures/starter-pack.js';
 
 const MASTER_LABEL = { fitness: 'Fitness', yoga: 'Yoga' };
 
@@ -29,7 +31,7 @@ function applyFilter(exercises, { masters, tags }) {
   );
 }
 
-async function refresh(container, filterState, { editingId = null, creating = false } = {}) {
+async function refresh(container, filterState, { editingId = null, creating = false, packMessage = null } = {}) {
   clear(container);
   const [allExercises, knownCategories] = await Promise.all([
     listExercises(),
@@ -39,14 +41,33 @@ async function refresh(container, filterState, { editingId = null, creating = fa
   container.append(
     el('div', { class: 'library__head' }, [
       el('h1', { text: 'Bibliothèque' }),
-      el('button', {
-        class: 'btn btn--primary',
-        text: '+ Ajouter',
-        disabled: creating,
-        onClick: () => refresh(container, filterState, { creating: true }),
-      }),
+      el('div', { class: 'library__head-actions' }, [
+        el('button', {
+          class: 'btn btn--ghost',
+          text: 'Charger le pack fitness',
+          onClick: async () => {
+            const existingNames = new Set(allExercises.map((e) => e.nom.toLowerCase()));
+            const toAdd = FITNESS_STARTER_PACK.filter((e) => !existingNames.has(e.nom.toLowerCase()));
+            for (const e of toAdd) await createExercise(e);
+            const msg = toAdd.length > 0
+              ? `${toAdd.length} exercice${toAdd.length > 1 ? 's' : ''} ajouté${toAdd.length > 1 ? 's' : ''}.`
+              : 'Le pack fitness est déjà entièrement chargé.';
+            await refresh(container, filterState, { packMessage: msg });
+          },
+        }),
+        el('button', {
+          class: 'btn btn--primary',
+          text: '+ Ajouter',
+          disabled: creating,
+          onClick: () => refresh(container, filterState, { creating: true }),
+        }),
+      ]),
     ]),
   );
+
+  if (packMessage) {
+    container.append(el('p', { class: 'muted small', text: packMessage }));
+  }
 
   if (creating) {
     container.append(
@@ -95,6 +116,7 @@ async function refresh(container, filterState, { editingId = null, creating = fa
 
 function renderRow(container, filterState, ex) {
   return el('li', { class: 'ex-list__item' }, [
+    ex.image ? el('img', { class: 'ex-thumb', src: ex.image, alt: '' }) : null,
     el('div', { class: 'ex-list__main' }, [
       el('div', { class: 'ex-list__title' }, [
         el('span', { class: 'ex-name', text: ex.nom }),
@@ -221,6 +243,47 @@ function renderForm({ container, filterState, knownCategories, exercise }) {
     value: isEdit ? exercise.reposDefaut : 10,
   });
 
+  const descriptionInput = el('textarea', {
+    rows: '2',
+    placeholder: 'Description optionnelle (consignes, conseils…)',
+    text: isEdit ? exercise.description ?? '' : '',
+  });
+
+  let imageDataUrl = isEdit ? exercise.image ?? null : null;
+  const imagePreview = el('img', { class: 'image-preview', src: imageDataUrl ?? '', hidden: !imageDataUrl });
+  const imageFileInput = el('input', { type: 'file', accept: 'image/*', hidden: true });
+  const pickImageBtn = el('button', {
+    type: 'button', class: 'btn btn--ghost',
+    text: imageDataUrl ? 'Changer l’image' : 'Ajouter une image',
+    onClick: () => imageFileInput.click(),
+  });
+  const removeImageBtn = el('button', {
+    type: 'button', class: 'btn btn--danger-ghost', text: 'Retirer',
+    hidden: !imageDataUrl,
+    onClick: () => {
+      imageDataUrl = null;
+      imagePreview.hidden = true;
+      imagePreview.src = '';
+      removeImageBtn.hidden = true;
+      pickImageBtn.textContent = 'Ajouter une image';
+    },
+  });
+  imageFileInput.addEventListener('change', async () => {
+    const file = imageFileInput.files[0];
+    imageFileInput.value = '';
+    if (!file) return;
+    try {
+      imageDataUrl = await fileToCompressedDataUrl(file);
+      imagePreview.src = imageDataUrl;
+      imagePreview.hidden = false;
+      removeImageBtn.hidden = false;
+      pickImageBtn.textContent = 'Changer l’image';
+    } catch (err) {
+      errorBox.textContent = `Image invalide : ${err.message}`;
+      errorBox.hidden = false;
+    }
+  });
+
   const errorBox = el('p', { class: 'form__error', hidden: true });
 
   const form = el('form', { class: 'ex-form' }, [
@@ -231,6 +294,11 @@ function renderForm({ container, filterState, knownCategories, exercise }) {
     el('div', { class: 'ex-form__row' }, [
       el('label', {}, [el('span', { text: 'Durée effort par défaut (s)' }), dureeInput]),
       el('label', {}, [el('span', { text: 'Repos par défaut (s)' }), reposInput]),
+    ]),
+    el('label', {}, [el('span', { text: 'Description (optionnel)' }), descriptionInput]),
+    el('div', { class: 'image-picker' }, [
+      imagePreview,
+      el('div', { class: 'image-picker__actions' }, [pickImageBtn, removeImageBtn, imageFileInput]),
     ]),
     errorBox,
     el('div', { class: 'ex-form__actions' }, [
@@ -253,6 +321,8 @@ function renderForm({ container, filterState, knownCategories, exercise }) {
       categories: tags,
       dureeDefaut: dureeInput.value,
       reposDefaut: reposInput.value,
+      description: descriptionInput.value,
+      image: imageDataUrl,
     };
     try {
       if (isEdit) await updateExercise(exercise.id, payload);

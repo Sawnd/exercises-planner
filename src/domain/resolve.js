@@ -22,6 +22,8 @@ export function resolveManualSerie(serie, exercisesById) {
     return {
       exerciseId: exercise.id,
       nom: exercise.nom,
+      description: exercise.description || '',
+      image: exercise.image || null,
       duree: item.duree ?? exercise.dureeDefaut,
       repos: item.repos ?? exercise.reposDefaut,
     };
@@ -39,6 +41,8 @@ export function resolveRandomDraw(drawnExercises, { dureeGlobale, reposGlobale }
   return drawnExercises.map((exercise) => ({
     exerciseId: exercise.id,
     nom: exercise.nom,
+    description: exercise.description || '',
+    image: exercise.image || null,
     duree: dureeGlobale,
     repos: reposGlobale,
   }));

@@ -49,8 +49,10 @@ function startRun(view, ctx) {
   clear(view);
   const runEl = el('div', { class: 'run run--prepare' });
   const stepKind = el('p', { class: 'run__kind' });
+  const exerciseImage = el('img', { class: 'run__image', alt: '', hidden: true });
   const bigTime = el('div', { class: 'run__time' });
   const exerciseName = el('h1', { class: 'run__exercise' });
+  const exerciseDescription = el('p', { class: 'run__description', hidden: true });
   const nextUp = el('p', { class: 'run__next muted' });
   const progress = el('div', { class: 'run__progress' });
   const progressBar = el('div', { class: 'run__progress-bar' });
@@ -63,7 +65,9 @@ function startRun(view, ctx) {
   runEl.append(
     progress,
     stepKind,
+    exerciseImage,
     exerciseName,
+    exerciseDescription,
     bigTime,
     nextUp,
     el('div', { class: 'run__controls' }, [pauseBtn, nextBtn, stopBtn]),
@@ -92,6 +96,19 @@ function startRun(view, ctx) {
         exerciseName.textContent = step.exerciseName;
         nextUp.textContent = 'Prêt ?';
         announce(step.exerciseName); // annonce le premier exercice pendant la préparation
+      }
+      if (step.image) {
+        exerciseImage.src = step.image;
+        exerciseImage.hidden = false;
+      } else {
+        exerciseImage.hidden = true;
+        exerciseImage.src = '';
+      }
+      if (step.description) {
+        exerciseDescription.textContent = step.description;
+        exerciseDescription.hidden = false;
+      } else {
+        exerciseDescription.hidden = true;
       }
       progressBar.style.width = `${Math.round((index / total) * 100)}%`;
     },

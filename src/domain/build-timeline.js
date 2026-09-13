@@ -19,6 +19,8 @@ export function buildTimeline(resolved, { prepareSeconds = 3 } = {}) {
     label: 'Préparez-vous',
     seconds: prepareSeconds,
     exerciseName: resolved[0].nom,
+    image: resolved[0].image,
+    description: resolved[0].description,
   });
 
   resolved.forEach((entry, i) => {
@@ -27,15 +29,20 @@ export function buildTimeline(resolved, { prepareSeconds = 3 } = {}) {
       label: entry.nom,
       seconds: entry.duree,
       exerciseName: entry.nom,
+      image: entry.image,
+      description: entry.description,
     });
 
     const isLast = i === resolved.length - 1;
     if (!isLast && entry.repos > 0) {
+      const next = resolved[i + 1];
       steps.push({
         type: 'rest',
         label: 'Repos',
         seconds: entry.repos,
-        exerciseName: resolved[i + 1].nom, // prochain exercice
+        exerciseName: next.nom, // prochain exercice
+        image: next.image,
+        description: next.description,
       });
     }
   });
