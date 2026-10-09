@@ -158,7 +158,7 @@ h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
 .ex-form { display: flex; flex-direction: column; gap: 12px; background: var(--surface); border-radius: var(--radius); padding: 14px; }
 .ex-form label, .ex-form > label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
 .ex-form__row { display: flex; gap: 12px; }
-.ex-form__row label { flex: 1; }
+.ex-form__row label { flex: 1; min-width: 0; }
 .ex-form__actions { display: flex; gap: 10px; }
 .ex-form input, .ex-form select, .ex-form textarea {
   background: var(--bg);
@@ -233,7 +233,9 @@ a { color: var(--primary); }
   font-size: 1rem;
 }
 .serie-form__add { display: flex; gap: 8px; }
-.serie-form__add select { flex: 1; }
+/* Sans min-width: 0, un <select> ne rétrécit pas sous son option la plus longue et pousse le bouton hors du cadre. */
+.serie-form__add select { flex: 1; min-width: 0; }
+.serie-form__add .btn { flex-shrink: 0; }
 
 .serie-items { display: flex; flex-direction: column; gap: 8px; }
 .serie-item {
