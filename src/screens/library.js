@@ -155,21 +155,52 @@ function renderForm({ container, filterState, knownCategories, exercise }) {
   const isEdit = Boolean(exercise);
   let tags = isEdit ? [...exercise.categories] : [];
 
-  const datalistId = 'cat-suggestions';
-  const datalist = el(
-    'datalist',
-    { id: datalistId },
-    knownCategories.map((c) => el('option', { value: c })),
-  );
-
   const tagsBox = el('div', { class: 'tags-box' });
   const tagInput = el('input', {
     type: 'text',
     class: 'tags-box__input',
-    list: datalistId,
     placeholder: 'catégorie libre, Entrée pour ajouter',
     autocomplete: 'off',
   });
+
+  // Suggestions maison (et non <datalist>) : la liste native s'affiche où le navigateur
+  // veut, pas sous le champ. Celle-ci est ancrée juste en dessous de la zone de saisie.
+  const suggestionsBox = el('ul', { class: 'tag-suggestions', hidden: true });
+
+  function refreshSuggestions() {
+    const query = tagInput.value.trim().toLowerCase();
+    const candidates = knownCategories
+      .filter((c) => !tags.includes(c) && c.toLowerCase().includes(query))
+      .slice(0, 8);
+    clear(suggestionsBox);
+    suggestionsBox.hidden = candidates.length === 0;
+    for (const c of candidates) {
+      suggestionsBox.append(
+        el('li', {}, [
+          el('button', {
+            type: 'button',
+            class: 'tag-suggestions__item',
+            text: c,
+            // mousedown empêche le blur du champ avant le clic (sinon la liste disparaît trop tôt)
+            onMousedown: (e) => e.preventDefault(),
+            onClick: () => addTag(c),
+          }),
+        ]),
+      );
+    }
+  }
+
+  function hideSuggestions() {
+    suggestionsBox.hidden = true;
+  }
+
+  function addTag(value) {
+    if (value && !tags.includes(value)) tags.push(value);
+    tagInput.value = '';
+    renderTags();
+    tagInput.focus();
+    refreshSuggestions();
+  }
 
   function renderTags() {
     clear(tagsBox);
@@ -207,15 +238,22 @@ function renderForm({ container, filterState, knownCategories, exercise }) {
   tagInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      addPendingTag();
-      tagInput.focus(); // enchaîner plusieurs tags (re-rendu = nouvel attachement du champ)
+      addTag(tagInput.value.trim()); // enchaîne : le champ garde le focus
     } else if (e.key === 'Backspace' && tagInput.value === '' && tags.length) {
       tags.pop();
       renderTags();
       tagInput.focus();
+      refreshSuggestions();
+    } else if (e.key === 'Escape') {
+      hideSuggestions();
     }
   });
-  tagInput.addEventListener('blur', addPendingTag);
+  tagInput.addEventListener('input', refreshSuggestions);
+  tagInput.addEventListener('focus', refreshSuggestions);
+  tagInput.addEventListener('blur', () => {
+    addPendingTag();
+    hideSuggestions();
+  });
 
   renderTags();
 
@@ -292,10 +330,14 @@ function renderForm({ container, filterState, knownCategories, exercise }) {
   const errorBox = el('p', { class: 'form__error', hidden: true });
 
   const form = el('form', { class: 'ex-form' }, [
-    datalist,
     el('label', {}, [el('span', { text: 'Nom' }), nomInput]),
     el('label', {}, [el('span', { text: 'Master catégorie' }), masterSelect]),
-    el('label', {}, [el('span', { text: 'Catégories libres' }), tagsBox]),
+    // div et non label : dans un label, cliquer une suggestion ou la légende activerait le
+    // premier bouton « × » d'un tag.
+    el('div', { class: 'field' }, [
+      el('span', { text: 'Catégories libres' }),
+      el('div', { class: 'tags-field' }, [tagsBox, suggestionsBox]),
+    ]),
     el('div', { class: 'ex-form__row' }, [
       el('label', {}, [el('span', { text: 'Durée effort par défaut (s)' }), dureeInput]),
       el('label', {}, [el('span', { text: 'Repos par défaut (s)' }), reposInput]),
