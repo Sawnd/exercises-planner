@@ -30,3 +30,16 @@ les appareils qui ont une version précédente de l'app. Concrètement :
 
 En cas de doute sur l'impact d'un changement sur les données existantes : s'arrêter et poser la
 question plutôt que deviner.
+
+## Workflow Git et déploiement
+
+- **`main` = production.** Chaque push sur `main` déclenche le déploiement automatique sur GitHub
+  Pages (`.github/workflows/deploy.yml`) : https://sawnd.github.io/exercises-planner/
+- `main` est protégée : aucun push direct, on passe par une Pull Request.
+- **Tout le travail se fait sur la branche `dev`** (ou une branche de feature dédiée), jamais
+  directement sur `main`.
+- Une fois une évolution prête : ouvrir une PR `dev` → `main`, puis **attendre la validation
+  explicite de Stéphane avant de merger**. Ne jamais merger vers `main` de sa propre initiative.
+- Un commit par changement fonctionnel.
+- `vite.config.js` n'utilise `base: '/exercises-planner/'` que si `GITHUB_PAGES=true` (positionné
+  par la CI) ; en local (`npm run dev`/`build`/`preview`), `base` reste `/`.
