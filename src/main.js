@@ -32,9 +32,7 @@ async function router() {
   const render = routes[path] || routes[DEFAULT_ROUTE];
 
   document.querySelectorAll('.topbar__nav a').forEach((a) => {
-    const active = a.dataset.route === path;
-    a.classList.toggle('is-active', active);
-    if (active) a.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+    a.classList.toggle('is-active', a.dataset.route === path);
   });
 
   try {
@@ -58,11 +56,42 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && reminderEl) checkDailyReminder(reminderEl);
 });
 
-// Re-cliquer l'onglet déjà actif force un rafraîchissement de l'écran
-// (le hash ne change pas → pas d'événement `hashchange`).
+// Menu hamburger (mobile) : ouverture/fermeture du panneau de navigation.
+const topbarEl = document.querySelector('.topbar');
+const menuBtn = document.querySelector('.topbar__menu');
+
+function setMenuOpen(open, { restoreFocus = false } = {}) {
+  topbarEl.classList.toggle('is-open', open);
+  menuBtn.setAttribute('aria-expanded', String(open));
+  menuBtn.textContent = open ? '✕' : '☰';
+  if (!open && restoreFocus) menuBtn.focus();
+}
+
+menuBtn.addEventListener('click', () => {
+  setMenuOpen(!topbarEl.classList.contains('is-open'));
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && topbarEl.classList.contains('is-open')) {
+    setMenuOpen(false, { restoreFocus: true });
+  }
+});
+
+// Clic en dehors de la topbar : referme le menu.
+document.addEventListener('click', (e) => {
+  if (topbarEl.classList.contains('is-open') && !topbarEl.contains(e.target)) setMenuOpen(false);
+});
+
+// Passage en écran large : la nav redevient en ligne, on remet le menu à zéro.
+window.matchMedia('(min-width: 720px)').addEventListener('change', () => setMenuOpen(false));
+
+// Clic sur un onglet : referme le menu ; re-cliquer l'onglet déjà actif force un
+// rafraîchissement de l'écran (le hash ne change pas → pas d'événement `hashchange`).
 document.querySelector('.topbar__nav')?.addEventListener('click', (e) => {
   const link = e.target.closest('a[data-route]');
-  if (link && link.dataset.route === currentPath()) router();
+  if (!link) return;
+  setMenuOpen(false);
+  if (link.dataset.route === currentPath()) router();
 });
 
 router();
