@@ -193,24 +193,29 @@ function renderForm({ container, filterState, knownCategories, exercise }) {
     tagsBox.append(tagInput);
   }
 
-  function commitTag() {
+  // Ajoute la saisie en cours comme tag, SANS toucher au focus : appelée sur blur
+  // et à la soumission, elle ne doit jamais redonner le focus à ce champ.
+  function addPendingTag() {
     const value = tagInput.value.trim();
-    if (value && !tags.includes(value)) tags.push(value);
     tagInput.value = '';
+    if (!value || tags.includes(value)) return false;
+    tags.push(value);
     renderTags();
-    tagInput.focus();
+    return true;
   }
 
   tagInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      commitTag();
+      addPendingTag();
+      tagInput.focus(); // enchaîner plusieurs tags (re-rendu = nouvel attachement du champ)
     } else if (e.key === 'Backspace' && tagInput.value === '' && tags.length) {
       tags.pop();
       renderTags();
+      tagInput.focus();
     }
   });
-  tagInput.addEventListener('blur', commitTag);
+  tagInput.addEventListener('blur', addPendingTag);
 
   renderTags();
 
@@ -314,7 +319,7 @@ function renderForm({ container, filterState, knownCategories, exercise }) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    commitTag();
+    addPendingTag();
     const payload = {
       nom: nomInput.value,
       masterCategorie: masterSelect.value,
