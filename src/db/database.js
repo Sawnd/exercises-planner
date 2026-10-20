@@ -1,11 +1,12 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'exercises-planner';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export const STORE_EXERCISES = 'exercises';
 export const STORE_SERIES = 'series';
 export const STORE_HISTORY = 'history';
+export const STORE_SNAPSHOTS = 'snapshots';
 
 let _dbPromise = null;
 
@@ -26,6 +27,12 @@ export function getDB() {
           const store = db.createObjectStore(STORE_HISTORY, { keyPath: 'id' });
           store.createIndex('date', 'date');
           store.createIndex('serieId', 'serieId');
+        }
+        // v4 : copies de sécurité automatiques prises avant un import (interne, non exporté).
+        // Migration additive : aucun store existant n'est touché.
+        if (oldVersion < 4) {
+          const store = db.createObjectStore(STORE_SNAPSHOTS, { keyPath: 'id' });
+          store.createIndex('createdAt', 'createdAt');
         }
       },
     });
