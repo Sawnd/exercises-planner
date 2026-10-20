@@ -1,6 +1,7 @@
 import { el, clear } from '../ui/dom.js';
 import { exportAllData, importAllData } from '../db/backup.js';
 import { getStorageStatus, requestPersistentStorage } from '../db/persistence.js';
+import { markBackupDone, daysSinceLastBackup } from '../backup-state.js';
 
 export async function renderBackup(root) {
   clear(root);
@@ -15,10 +16,40 @@ function render(container) {
   const statusBox = el('p', { class: 'muted small' });
   const errorBox = el('p', { class: 'form__error', hidden: true });
 
+  const lastBackupBox = el('p', { class: 'small' });
+  function refreshLastBackup() {
+    const days = daysSinceLastBackup();
+    lastBackupBox.textContent = days === null
+      ? '💾 Dernière sauvegarde : jamais'
+      : `💾 Dernière sauvegarde : ${days === 0 ? 'aujourd’hui' : `il y a ${days} jour${days > 1 ? 's' : ''}`}`;
+  }
+  refreshLastBackup();
+
   function setBusy(busy) {
+    shareBtn.disabled = busy;
     exportBtn.disabled = busy;
     importBtn.disabled = busy;
   }
+
+  function backupFileOf(data) {
+    return new File(
+      [JSON.stringify(data, null, 2)],
+      `exercises-planner-${data.exportedAt.slice(0, 10)}.json`,
+      { type: 'application/json' },
+    );
+  }
+
+  function downloadFile(file) {
+    const url = URL.createObjectURL(file);
+    const link = el('a', { href: url, download: file.name });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  const summaryOf = (data) =>
+    `${data.exercises.length} exercice(s), ${data.series.length} série(s), ${data.history.length} séance(s)`;
 
   function showStatus(text, { spinner = false } = {}) {
     clear(statusBox);
@@ -26,21 +57,55 @@ function render(container) {
     statusBox.append(el('span', { text }));
   }
 
-  const exportBtn = el('button', { class: 'btn btn--primary', text: 'Exporter (JSON)' });
+  // Sauvegarde en un geste : feuille de partage du téléphone (Drive, mail, Notes…),
+  // avec repli sur un téléchargement si le partage de fichiers n'est pas supporté.
+  const shareBtn = el('button', { class: 'btn btn--primary', text: 'Sauvegarder' });
+  shareBtn.addEventListener('click', async () => {
+    errorBox.hidden = true;
+    setBusy(true);
+    showStatus('Préparation de la sauvegarde…', { spinner: true });
+    try {
+      const data = await exportAllData();
+      const file = backupFileOf(data);
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: 'Sauvegarde Exercises Planner' });
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            showStatus('Partage annulé : aucune sauvegarde enregistrée.');
+            return;
+          }
+          throw err;
+        }
+        markBackupDone();
+        refreshLastBackup();
+        showStatus(`Sauvegarde envoyée : ${summaryOf(data)}. Vérifie qu'elle est bien arrivée (Drive, mail…).`);
+      } else {
+        downloadFile(file);
+        markBackupDone();
+        refreshLastBackup();
+        showStatus(`Fichier téléchargé : ${summaryOf(data)}. Mets-le à l'abri hors de cet appareil.`);
+      }
+    } catch (err) {
+      clear(statusBox);
+      errorBox.textContent = `Échec de la sauvegarde : ${err.message}`;
+      errorBox.hidden = false;
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  const exportBtn = el('button', { class: 'btn btn--ghost', text: 'Télécharger (JSON)' });
   exportBtn.addEventListener('click', async () => {
     errorBox.hidden = true;
     setBusy(true);
     showStatus('Export en cours…', { spinner: true });
     try {
       const data = await exportAllData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = el('a', { href: url, download: `exercises-planner-${data.exportedAt.slice(0, 10)}.json` });
-      document.body.append(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      showStatus(`Export généré : ${data.exercises.length} exercice(s), ${data.series.length} série(s), ${data.history.length} séance(s).`);
+      downloadFile(backupFileOf(data));
+      markBackupDone();
+      refreshLastBackup();
+      showStatus(`Export généré : ${summaryOf(data)}.`);
     } finally {
       setBusy(false);
     }
@@ -79,7 +144,8 @@ function render(container) {
   container.append(
     el('h1', { text: 'Export / Import' }),
     el('p', { class: 'muted', text: 'Sauvegarde locale complète (bibliothèque, séries, historique) au format JSON — aucune donnée ne quitte cet appareil.' }),
-    el('div', { class: 'ex-form__actions' }, [exportBtn, importBtn, fileInput]),
+    lastBackupBox,
+    el('div', { class: 'ex-form__actions backup__actions' }, [shareBtn, exportBtn, importBtn, fileInput]),
     statusBox,
     errorBox,
     el('p', { class: 'muted small', text: 'L’import remplace intégralement les données actuelles : exporte d’abord si tu veux garder une sauvegarde de ce qui est déjà sur cet appareil.' }),

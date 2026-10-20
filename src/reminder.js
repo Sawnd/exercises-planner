@@ -1,25 +1,27 @@
 import { el, clear } from './ui/dom.js';
 import { getStats, dayKey } from './db/history.js';
+import { backupReminderMessage } from './backup-state.js';
 
-// Rappel passif : bandeau in-app + badge sur l'icône si la séance du jour
-// n'est pas encore faite. Aucun backend, aucune notification programmée
-// (voir la discussion sur les contraintes de l'app 100% locale).
+// Bandeau de rappel (aucun backend, aucune notification programmée — voir la
+// discussion sur les contraintes de l'app 100% locale). Par priorité :
+//   1. rappel de sauvegarde des données (si rien/trop ancien),
+//   2. rappel de séance du jour (+ badge sur l'icône).
 
-function dismissKey(day) {
-  return `reminder-dismissed-${day}`;
+function dismissKey(scope) {
+  return `reminder-dismissed-${scope}`;
 }
 
-function wasDismissedToday(day) {
+function wasDismissed(scope) {
   try {
-    return sessionStorage.getItem(dismissKey(day)) === '1';
+    return sessionStorage.getItem(dismissKey(scope)) === '1';
   } catch {
     return false;
   }
 }
 
-function dismissToday(day) {
+function dismiss(scope) {
   try {
-    sessionStorage.setItem(dismissKey(day), '1');
+    sessionStorage.setItem(dismissKey(scope), '1');
   } catch {
     /* stockage indisponible : le bandeau réapparaîtra, tant pis */
   }
@@ -35,6 +37,24 @@ async function updateBadge(done) {
   }
 }
 
+function showBanner(bannerEl, { message, href, actionLabel, scope }) {
+  bannerEl.hidden = false;
+  bannerEl.append(
+    el('span', { class: 'reminder-banner__text', text: message }),
+    el('a', { class: 'btn btn--primary btn--sm', href, text: actionLabel }),
+    el('button', {
+      type: 'button',
+      class: 'reminder-banner__close',
+      'aria-label': 'Fermer',
+      text: '✕',
+      onClick: () => {
+        dismiss(scope);
+        bannerEl.hidden = true;
+      },
+    }),
+  );
+}
+
 /** À appeler après chaque navigation pour tenir le bandeau/badge à jour. */
 export async function checkDailyReminder(bannerEl) {
   const stats = await getStats();
@@ -44,28 +64,24 @@ export async function checkDailyReminder(bannerEl) {
   await updateBadge(done);
 
   clear(bannerEl);
-  if (done || wasDismissedToday(today)) {
-    bannerEl.hidden = true;
+  bannerEl.hidden = true;
+
+  const onExportScreen = location.hash === '#/export';
+  const backupMessage = onExportScreen ? null : await backupReminderMessage();
+  if (backupMessage && !wasDismissed(`backup-${today}`)) {
+    showBanner(bannerEl, {
+      message: backupMessage,
+      href: '#/export',
+      actionLabel: 'Sauvegarder',
+      scope: `backup-${today}`,
+    });
     return;
   }
+
+  if (done || wasDismissed(today)) return;
 
   const message = stats.currentStreak > 0
     ? `🔥 Ne casse pas ta série de ${stats.currentStreak} jour${stats.currentStreak > 1 ? 's' : ''} — fais ta séance aujourd'hui.`
     : `💪 Pas encore de séance aujourd'hui — c'est le moment.`;
-
-  bannerEl.hidden = false;
-  bannerEl.append(
-    el('span', { class: 'reminder-banner__text', text: message }),
-    el('a', { class: 'btn btn--primary btn--sm', href: '#/player', text: 'Lancer' }),
-    el('button', {
-      type: 'button',
-      class: 'reminder-banner__close',
-      'aria-label': 'Fermer',
-      text: '✕',
-      onClick: () => {
-        dismissToday(today);
-        bannerEl.hidden = true;
-      },
-    }),
-  );
+  showBanner(bannerEl, { message, href: '#/player', actionLabel: 'Lancer', scope: today });
 }
