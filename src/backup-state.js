@@ -52,6 +52,31 @@ export async function hasAnyData() {
   return counts.some((n) => n > 0);
 }
 
+// Détection de perte : on se souvient (localStorage) que l'appareil a déjà contenu des
+// données. Si la base est ensuite vide alors que ce souvenir existe, on propose de
+// restaurer. Limite : un « effacer les données du site » efface aussi ce souvenir.
+const KEY_HAD_DATA = 'ep:hadData';
+
+/** À appeler régulièrement : mémorise qu'il y a des données (ne l'efface jamais). */
+export async function rememberDataPresence() {
+  if (await hasAnyData()) write(KEY_HAD_DATA, '1');
+}
+
+/** À appeler après une suppression VOLONTAIRE : si tout est vide, ce n'est pas une perte. */
+export async function forgetDataMarkerIfEmpty() {
+  if (await hasAnyData()) return;
+  try {
+    localStorage.removeItem(KEY_HAD_DATA);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** La base est vide alors qu'elle a déjà contenu des données. */
+export async function dataLossSuspected() {
+  return read(KEY_HAD_DATA) === '1' && !(await hasAnyData());
+}
+
 /** Texte du rappel de sauvegarde, ou null s'il n'y a rien à rappeler. */
 export async function backupReminderMessage() {
   if (!(await hasAnyData())) return null;

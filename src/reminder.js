@@ -1,6 +1,6 @@
 import { el, clear } from './ui/dom.js';
 import { getStats, dayKey } from './db/history.js';
-import { backupReminderMessage } from './backup-state.js';
+import { backupReminderMessage, dataLossSuspected, rememberDataPresence } from './backup-state.js';
 
 // Bandeau de rappel (aucun backend, aucune notification programmée — voir la
 // discussion sur les contraintes de l'app 100% locale). Par priorité :
@@ -67,6 +67,21 @@ export async function checkDailyReminder(bannerEl) {
   bannerEl.hidden = true;
 
   const onExportScreen = location.hash === '#/export';
+
+  // Priorité 0 : les données ont disparu → pousser vers la restauration.
+  if (await dataLossSuspected()) {
+    if (!onExportScreen && !wasDismissed(`loss-${today}`)) {
+      showBanner(bannerEl, {
+        message: '⚠️ Tes données ont disparu de cet appareil. Restaure ta dernière sauvegarde (Drive, mail…).',
+        href: '#/export',
+        actionLabel: 'Restaurer',
+        scope: `loss-${today}`,
+      });
+    }
+    return;
+  }
+  await rememberDataPresence();
+
   const backupMessage = onExportScreen ? null : await backupReminderMessage();
   if (backupMessage && !wasDismissed(`backup-${today}`)) {
     showBanner(bannerEl, {
