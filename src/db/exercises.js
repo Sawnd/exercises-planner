@@ -1,5 +1,6 @@
 import { getDB, STORE_EXERCISES } from './database.js';
 import { seriesUsingExercise } from './series.js';
+import { forgetDataMarkerIfEmpty } from '../backup-state.js';
 
 /**
  * Modèle Exercise stocké en IndexedDB :
@@ -90,6 +91,7 @@ export async function deleteExercise(id) {
   }
   const db = await getDB();
   await db.delete(STORE_EXERCISES, id);
+  await forgetDataMarkerIfEmpty(); // tout supprimé volontairement ≠ données perdues
 }
 
 /** Map { [id]: Exercise } pour la résolution des séries. */

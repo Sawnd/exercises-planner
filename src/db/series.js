@@ -1,4 +1,5 @@
 import { getDB, STORE_SERIES } from './database.js';
+import { forgetDataMarkerIfEmpty } from '../backup-state.js';
 
 /**
  * Modèle Série stocké en IndexedDB :
@@ -72,6 +73,7 @@ export async function updateSerie(id, input) {
 export async function deleteSerie(id) {
   const db = await getDB();
   await db.delete(STORE_SERIES, id);
+  await forgetDataMarkerIfEmpty(); // tout supprimé volontairement ≠ données perdues
 }
 
 /** Séries (id + nom) qui référencent l'exercice donné — pour bloquer sa suppression. */

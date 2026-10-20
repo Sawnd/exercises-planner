@@ -77,7 +77,11 @@ async function refresh(container, filterState, { editingId = null, creating = fa
 
   if (allExercises.length === 0 && !creating) {
     container.append(
-      el('p', { class: 'muted', text: 'Aucun exercice. Ajoute ton premier exercice de kiné, de fitness ou de yoga.' }),
+      el('p', { class: 'muted' }, [
+        'Aucun exercice. Ajoute ton premier exercice de kiné, de fitness ou de yoga — ou ',
+        el('a', { href: '#/export', text: 'restaure une sauvegarde' }),
+        '.',
+      ]),
     );
     return;
   }
