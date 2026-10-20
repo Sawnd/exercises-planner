@@ -7,8 +7,10 @@ import { renderPlayer } from './screens/player.js';
 import { renderHistory } from './screens/history.js';
 import { renderBackup } from './screens/backup.js';
 import { checkDailyReminder } from './reminder.js';
+import { requestPersistentStorage } from './db/persistence.js';
 
 registerSW({ immediate: true });
+requestPersistentStorage();
 
 const routes = {
   '/bibliotheque': renderLibrary,

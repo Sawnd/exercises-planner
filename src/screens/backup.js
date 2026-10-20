@@ -1,5 +1,6 @@
 import { el, clear } from '../ui/dom.js';
 import { exportAllData, importAllData } from '../db/backup.js';
+import { getStorageStatus, requestPersistentStorage } from '../db/persistence.js';
 
 export async function renderBackup(root) {
   clear(root);
@@ -82,5 +83,43 @@ function render(container) {
     statusBox,
     errorBox,
     el('p', { class: 'muted small', text: 'L’import remplace intégralement les données actuelles : exporte d’abord si tu veux garder une sauvegarde de ce qui est déjà sur cet appareil.' }),
+    renderStorageProtection(),
   );
+}
+
+function formatMB(bytes) {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+/** Bloc « protection du stockage » : état de la persistance + bouton pour la demander. */
+function renderStorageProtection() {
+  const box = el('div', { class: 'storage-status' });
+
+  async function refresh() {
+    const status = await getStorageStatus();
+    clear(box);
+    const usage = status.usage != null ? ` · ${formatMB(status.usage)} utilisés` : '';
+
+    if (!status.supported) {
+      box.append(el('p', { class: 'muted small', text: `Protection du stockage : non gérée par ce navigateur${usage}. Exporte régulièrement.` }));
+      return;
+    }
+    if (status.persisted) {
+      box.append(el('p', { class: 'small', text: `🛡️ Stockage protégé : le navigateur n’efface pas tes données automatiquement${usage}. Une sauvegarde reste utile (effacement manuel, désinstallation).` }));
+      return;
+    }
+    box.append(
+      el('p', { class: 'small', text: `⚠️ Stockage non protégé : le navigateur peut effacer tes données si le téléphone manque de place${usage}. Exporte régulièrement.` }),
+      el('button', {
+        type: 'button', class: 'btn btn--ghost btn--sm', text: 'Protéger le stockage',
+        onClick: async () => {
+          await requestPersistentStorage();
+          await refresh();
+        },
+      }),
+    );
+  }
+
+  refresh();
+  return box;
 }
